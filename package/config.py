@@ -11,4 +11,3 @@ ALLOWED_EXTENSIONS = {'.py', '.js', '.java', '.cpp', '.c', '.go', '.rs', '.ts'}
 MAX_FILES_PER_UPLOAD = 50
 
 DEBUG = os.getenv("FLASK_DEBUG", "True").lower() == "true"
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")

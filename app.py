@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 from package.agents.orchestrator import ReviewOrchestrator
 from package.utils.file_processor import FileProcessor
-from package.config import DEBUG, SECRET_KEY, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
+from package.config import DEBUG, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,7 +17,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = SECRET_KEY
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
