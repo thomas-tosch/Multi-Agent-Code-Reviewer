@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Agent Code Reviewer</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1><i class="fas fa-robot"></i> Multi-Agent Code Reviewer</h1>
+        <p class="subtitle">AI-powered code analysis with specialized agents</p>
+      </header>
+
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">
+        {{ message }}
+        <button
+          class="close-alert"
+          onclick="this.parentElement.style.display='none'"
+        >
+          ×
+        </button>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
+
+      <div class="upload-section">
+        <div class="tab-container">
+          <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('paste')">
+              <i class="fas fa-paste"></i> Paste Code
+            </button>
+            <button class="tab-button" onclick="switchTab('file')">
+              <i class="fas fa-file-code"></i> Upload File
+            </button>
+            <button class="tab-button" onclick="switchTab('repository')">
+              <i class="fas fa-folder-open"></i> Upload Repository
+            </button>
+          </div>
+
+          <!-- Paste Code Tab -->
+          <div id="paste-tab" class="tab-content active">
+            <form action="/review" method="POST">
+              <div class="form-group">
+                <label for="code">
+                  <i class="fas fa-code"></i> Paste your code here
+                </label>
+                <textarea
+                  name="code"
+                  id="code"
+                  class="code-input"
+                  placeholder="// Paste your code here for review...
+function example() {
+    // Your code
+}"
+                  rows="15"
+                  required
+                ></textarea>
+              </div>
+              <button type="submit" class="submit-btn">
+                <i class="fas fa-search"></i> Analyze Code
+              </button>
+            </form>
+          </div>
+
+          <!-- Upload File Tab -->
+          <div id="file-tab" class="tab-content">
+            <form action="/review" method="POST" enctype="multipart/form-data">
+              <div class="form-group">
+                <label for="file" class="file-upload-label">
+                  <i class="fas fa-upload"></i> Choose a file to review
+                </label>
+                <input
+                  type="file"
+                  name="file"
+                  id="file"
+                  accept="{{ allowed_extensions|join(',') }}"
+                  required
+                  onchange="updateFileName(this)"
+                />
+                <div class="file-info">
+                  <span id="file-name">No file selected</span>
+                  <small class="help-text">
+                    Supported: {{ allowed_extensions|join(', ') }} | Max size:
+                    {{ max_size_mb }}MB
+                  </small>
+                </div>
+              </div>
+              <button type="submit" class="submit-btn">
+                <i class="fas fa-search"></i> Analyze File
+              </button>
+            </form>
+          </div>
+
+          <!-- Repository Tab -->
+          <div id="repository-tab" class="tab-content">
+            <form
+              action="/review-repository"
+              method="POST"
+              enctype="multipart/form-data"
+            >
+              <div class="form-group">
+                <label for="repository" class="file-upload-label">
+                  <i class="fas fa-file-archive"></i> Upload ZIP archive
+                </label>
+                <input
+                  type="file"
+                  name="repository"
+                  id="repository"
+                  accept=".zip"
+                  required
+                  onchange="updateRepoName(this)"
+                />
+                <div class="file-info">
+                  <span id="repo-name">No repository selected</span>
+                  <small class="help-text">
+                    Upload a ZIP file containing your codebase (max {{
+                    max_size_mb }}MB)
+                  </small>
+                </div>
+              </div>
+              <button type="submit" class="submit-btn">
+                <i class="fas fa-search"></i> Analyze Repository
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="features">
+        <h2>🚀 Specialized Review Agents</h2>
+        <div class="agent-cards">
+          <div class="agent-card security">
+            <div class="agent-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <h3>Security Agent</h3>
+            <ul>
+              <li>SQL Injection detection</li>
+              <li>XSS vulnerabilities</li>
+              <li>Authentication issues</li>
+              <li>Input validation</li>
+            </ul>
+          </div>
+          <div class="agent-card performance">
+            <div class="agent-icon">
+              <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <h3>Performance Agent</h3>
+            <ul>
+              <li>Time complexity analysis</li>
+              <li>Memory optimization</li>
+              <li>Database query issues</li>
+              <li>Resource management</li>
+            </ul>
+          </div>
+          <div class="agent-card style">
+            <div class="agent-icon">
+              <i class="fas fa-palette"></i>
+            </div>
+            <h3>Style Agent</h3>
+            <ul>
+              <li>Code readability</li>
+              <li>Naming conventions</li>
+              <li>Best practices</li>
+              <li>Documentation quality</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function switchTab(tabName) {
+        document.querySelectorAll(".tab-content").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+        document.querySelectorAll(".tab-button").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+
+        document.getElementById(tabName + "-tab").classList.add("active");
+        event.target.classList.add("active");
+      }
+
+      function updateFileName(input) {
+        const fileName = input.files[0]?.name || "No file selected";
+        document.getElementById("file-name").textContent = fileName;
+      }
+
+      function updateRepoName(input) {
+        const fileName = input.files[0]?.name || "No repository selected";
+        document.getElementById("repo-name").textContent = fileName;
+      }
+    </script>
+  </body>
+</html>

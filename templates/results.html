@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Review Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-robot"></i> Code Review Results</h1>
+            <a href="/" class="back-link">
+                <i class="fas fa-arrow-left"></i> New Review
+            </a>
+        </header>
+        <div class="summary-section">
+            <h2>📊 Review Summary</h2>
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-value">{{ results.metadata.agents_count }}</div>
+                    <div class="stat-label">Agents Used</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ results.summary.total_issues }}</div>
+                    <div class="stat-label">Issues Found</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ "%.1f"|format(results.summary.average_confidence * 100) }}%</div>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ "%.2f"|format(results.metadata.execution_time) }}s</div>
+                    <div class="stat-label">Analysis Time</div>
+                </div>
+            </div>
+            
+            <div class="consensus-badge {{ results.summary.review_consensus|lower|replace(' ', '-')|replace('-', '') }}">
+                <i class="fas fa-chart-line"></i> {{ results.summary.review_consensus }}
+            </div>
+        </div>
+        {% if mode == 'single' or mode == 'file' %}
+        <div class="code-section">
+            <h2>📝 Reviewed Code</h2>
+            {% if filename %}
+                <div class="filename-badge">{{ filename }}</div>
+            {% endif %}
+            <pre><code class="language-python">{{ code[:1000] }}{% if code|length > 1000 %}...{% endif %}</code></pre>
+            {% if code|length > 1000 %}
+                <details>
+                    <summary>Show full code ({{ code|length }} characters)</summary>
+                    <pre><code class="language-python">{{ code }}</code></pre>
+                </details>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if mode == 'repository' %}
+        <div class="repository-overview">
+            <h2>📁 Repository Analysis</h2>
+            <div class="file-list">
+                <h3>Files Analyzed ({{ files|length }})</h3>
+                <ul class="file-tree">
+                    {% for filepath in files.keys() %}
+                    <li>
+                        <i class="fas fa-file-code"></i> {{ filepath }}
+                        {% if filepath in results and results[filepath].summary %}
+                            <span class="file-issues-badge">{{ results[filepath].summary.total_issues }} issues</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+        <div class="reviews-section">
+            <h2>🤖 Agent Reviews</h2>
+            
+            <div class="review-tabs">
+                {% for agent_name, review in results.reviews.items() %}
+                <button class="review-tab-btn {% if loop.first %}active{% endif %}" 
+                        onclick="showReview('{{ agent_name }}')">
+                    {% if agent_name == 'security' %}
+                        <i class="fas fa-shield-alt"></i>
+                    {% elif agent_name == 'performance' %}
+                        <i class="fas fa-tachometer-alt"></i>
+                    {% elif agent_name == 'style' %}
+                        <i class="fas fa-palette"></i>
+                    {% endif %}
+                    {{ agent_name|title }}
+                    {% if review.issues_found > 0 %}
+                        <span class="issue-count">{{ review.issues_found }}</span>
+                    {% endif %}
+                </button>
+                {% endfor %}
+            </div>
+
+            {% for agent_name, review in results.reviews.items() %}
+            <div id="review-{{ agent_name }}" class="review-content {% if loop.first %}active{% endif %}">
+                <div class="review-header">
+                    <h3>
+                        {% if agent_name == 'security' %}
+                            <i class="fas fa-shield-alt"></i> Security Analysis
+                        {% elif agent_name == 'performance' %}
+                            <i class="fas fa-tachometer-alt"></i> Performance Analysis
+                        {% elif agent_name == 'style' %}
+                            <i class="fas fa-palette"></i> Style Analysis
+                        {% endif %}
+                    </h3>
+                    <div class="confidence-meter">
+                        <span>Confidence:</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: {{ (review.confidence * 100)|int }}%"></div>
+                        </div>
+                        <span>{{ "%.1f"|format(review.confidence * 100) }}%</span>
+                    </div>
+                </div>
+
+                {% if review.error %}
+                <div class="alert alert-error">
+                    <i class="fas fa-exclamation-triangle"></i> Error: {{ review.error }}
+                </div>
+                {% else %}
+                <div class="review-body">
+                    <div class="focus-areas">
+                        <strong>Focus Areas:</strong>
+                        {% for area in review.focus_areas %}
+                            <span class="focus-badge">{{ area }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="review-feedback">
+                        {{ review.raw_feedback|safe|replace('\n', '<br>') }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% if results.summary.critical_agents %}
+        <div class="action-items">
+            <h2>⚠️ Critical Findings</h2>
+            <div class="alert alert-warning">
+                <p>The following agents found significant issues that require attention:</p>
+                <ul>
+                    {% for agent in results.summary.critical_agents %}
+                    <li><strong>{{ agent|title }}</strong> - Multiple issues detected</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+        <div class="export-section">
+            <h3>📤 Export Results</h3>
+            <div class="export-buttons">
+                <button onclick="exportJSON()" class="export-btn">
+                    <i class="fas fa-file-code"></i> Export as JSON
+                </button>
+                <button onclick="window.print()" class="export-btn">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+                <button onclick="copyToClipboard()" class="export-btn">
+                    <i class="fas fa-copy"></i> Copy Summary
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    
+    <script>
+        function showReview(agentName) {
+            document.querySelectorAll('.review-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.review-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('review-' + agentName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function exportJSON() {
+            const results = {{ results|tojson }};
+            const dataStr = JSON.stringify(results, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'code-review-results.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        function copyToClipboard() {
+            const summary = `Code Review Summary:
+- Total Issues: {{ results.summary.total_issues }}
+- Consensus: {{ results.summary.review_consensus }}
+- Average Confidence: {{ "%.1f"|format(results.summary.average_confidence * 100) }}%
+- Analysis Time: {{ "%.2f"|format(results.metadata.execution_time) }}s`;
+            
+            navigator.clipboard.writeText(summary).then(() => {
+                alert('Summary copied to clipboard!');
+            });
+        }
+        document.addEventListener('DOMContentLoaded', (event) => {
+            Prism.highlightAll();
+        });
+    </script>
+</body>
+</html>
